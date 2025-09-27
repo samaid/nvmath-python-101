@@ -47,9 +47,12 @@ print("Benchmarking stateful API...")
 print(benchmark(lambda: matmul_batched_stateful(d, a, b, bias), n_repeat=5))
 print("Benchmarking stateful API with autotuning...")
 print(benchmark(lambda: matmul_batched_stateful_autotuned(d, a, b, bias), n_repeat=5))
-print("Benchmarking stateful API execute...")
 
 with nvmath.linalg.advanced.Matmul(a[0], b[0]) as mm:
     mm.plan(epilog=MatmulEpilog(MatmulEpilog.RELU_BIAS), epilog_inputs={"bias": bias[0]})
+    print("Benchmarking stateful API execute before autotuning...")
+    print(benchmark(lambda: matmul_batched_stateful_execute(mm, d, a, b, bias), n_repeat=5))
+
     mm.autotune(iterations=5)
+    print("Benchmarking stateful API execute after autotuning...")
     print(benchmark(lambda: matmul_batched_stateful_execute(mm, d, a, b, bias), n_repeat=5))
