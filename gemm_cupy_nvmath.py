@@ -16,5 +16,6 @@ alpha = 1.5
 beta = 0.5
 
 # Now benchmark with cupyx.profiler.benchmark()
-print(benchmark(lambda: alpha * a @ b + beta * c, n_repeat=5, n_warmup=1))
-print(benchmark(lambda: nvmath.linalg.advanced.matmul(a, b, c, alpha=alpha, beta=beta), n_repeat=5, n_warmup=1))
+print("cupy a@b", benchmark(lambda: alpha * a @ b + beta * c, n_repeat=5, n_warmup=1))
+print("cupy matmul", benchmark(lambda: alpha * cp.matmul(a, b) + beta * c, n_repeat=5, n_warmup=1))
+print("nvmath matmul", benchmark(lambda: nvmath.linalg.advanced.matmul(a, b, c, alpha=alpha, beta=beta), n_repeat=5, n_warmup=1))
