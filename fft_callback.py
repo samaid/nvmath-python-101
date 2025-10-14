@@ -174,9 +174,11 @@ def process_cupy_subsequent_call(image_gpu, sigma_value):
 
 
 print("*** CUPY BREAKDOWN ***")
-print("First call", benchmark(lambda: process_cupy_first_call(image_gpu, sigma_value), n_repeat=5, n_warmup=1))
-print("Subsequent calls", benchmark(lambda: process_cupy_subsequent_call(image_gpu, sigma_value), n_repeat=5, n_warmup=1))
+perf_first_call = benchmark(lambda: process_cupy_first_call(image_gpu, sigma_value), n_repeat=5, n_warmup=1).gpu_times.min()
+perf_subsequent_call = benchmark(lambda: process_cupy_subsequent_call(image_gpu, sigma_value), n_repeat=5, n_warmup=1).gpu_times.min()
 
+print(f"First call cost = {perf_first_call:0.4f} sec")
+print(f"Subsequent call cost = {perf_subsequent_call:0.4f} sec")
 
 # Create the gaussian kernel once for the batch (R2C format)
 filter = create_gaussian_filter(image_gpu.shape, sigma_value).astype(cp.complex64)
@@ -216,11 +218,18 @@ ifft = inverse_fft_plan(c2r_output)
 fft_image = forward_fft_execute(fft, image_gpu)
 filtered_image = inverse_fft_execute(ifft, fft_image)
 
+print("*** NVMATH BREAKDOWN ***")
 print(image_gpu.sum())
 print(filtered_image.sum())
 
-print(f"Compilation cost = ", benchmark(lambda: compile_epilog(), n_repeat=5, n_warmup=1))
-print(f"Forward FFT plan cost =", benchmark(lambda: forward_fft_plan(image_gpu, epilog), n_repeat=5, n_warmup=1))
-print(f"Inverse FFT plan cost =", benchmark(lambda: inverse_fft_plan(c2r_output), n_repeat=5, n_warmup=1))
-print(f"Forward FFT execute cost =", benchmark(lambda: forward_fft_execute(fft, image_gpu), n_repeat=5, n_warmup=1))
-print(f"Inverse FFT execute cost =", benchmark(lambda: inverse_fft_execute(ifft, fft_image), n_repeat=5, n_warmup=1))
+perf_compile_epilog = benchmark(lambda: compile_epilog(), n_repeat=5, n_warmup=1).gpu_times.min()
+perf_forward_fft_plan = benchmark(lambda: forward_fft_plan(image_gpu, epilog), n_repeat=5, n_warmup=1).gpu_times.min()
+perf_inverse_fft_plan = benchmark(lambda: inverse_fft_plan(c2r_output), n_repeat=5, n_warmup=1).gpu_times.min()
+perf_forward_fft_execute = benchmark(lambda: forward_fft_execute(fft, image_gpu), n_repeat=5, n_warmup=1).gpu_times.min()
+perf_inverse_fft_execute = benchmark(lambda: inverse_fft_execute(ifft, fft_image), n_repeat=5, n_warmup=1).gpu_times.min()
+
+print(f"Compilation cost = {perf_compile_epilog:0.4f} sec")
+print(f"Forward FFT plan cost = {perf_forward_fft_plan:0.4f} sec")
+print(f"Inverse FFT plan cost = {perf_inverse_fft_plan:0.4f} sec")
+print(f"Forward FFT execute cost = {perf_forward_fft_execute:0.4f} sec")
+print(f"Inverse FFT execute cost = {perf_inverse_fft_execute:0.4f} sec")
