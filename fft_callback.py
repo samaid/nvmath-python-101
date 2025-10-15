@@ -42,10 +42,10 @@ def gaussian_filter_cupy(image, sigma, clear_cache=True):
 
 
 image_gpu = cp.asarray(original_image, dtype=cp.float32)
+
 filtered_image_cupy = gaussian_filter_cupy(image_gpu, sigma_value)
-print("***CUPY***")
-print(f"Checksum={filtered_image_cupy.sum():.1f}")
-print(benchmark(lambda: gaussian_filter_cupy(image_gpu, sigma_value), n_repeat=5, n_warmup=1))
+benchmark_result = benchmark(lambda: gaussian_filter_cupy(image_gpu, sigma_value), n_repeat=5, n_warmup=1).gpu_times.min()
+print(f"Gaussian filter cupy cost = {benchmark_result:0.4f} sec")
 
 
 def gaussian_filter_nvmath(image, sigma):
@@ -78,9 +78,8 @@ def gaussian_filter_nvmath(image, sigma):
     return filtered
 
 filtered_image_nvmath = gaussian_filter_nvmath(image_gpu, sigma_value)
-print("*** NVMATH ***")
-print(f"Checksum={filtered_image_cupy.sum():.1f}")
-print(benchmark(lambda: gaussian_filter_nvmath(image_gpu, sigma_value), n_repeat=5, n_warmup=1))
+benchmark_result = benchmark(lambda: gaussian_filter_nvmath(image_gpu, sigma_value), n_repeat=5, n_warmup=1).gpu_times.min()
+print(f"Gaussian filter nvmath-python cost = {benchmark_result:0.4f} sec")
 
 
 batch_size = 16
@@ -101,9 +100,8 @@ def process_batch_cupy(images_gpu, sigma_value):
 
 
 filtered_images_cupy = process_batch_cupy(images_gpu, sigma_value)
-print("*** CUPY BATCHED ***")
-print(f"Checksum={filtered_images_cupy[0].sum():.1f}")
-print(benchmark(lambda: process_batch_cupy(images_gpu, sigma_value), n_repeat=5, n_warmup=1))
+benchmark_result = benchmark(lambda: process_batch_cupy(images_gpu, sigma_value), n_repeat=5, n_warmup=1).gpu_times.min()
+print(f"Process batch cupy cost = {benchmark_result:0.4f} sec")
 
 
 def process_batch_nvmath(images_gpu, sigma):
@@ -158,9 +156,8 @@ def process_batch_nvmath(images_gpu, sigma):
 
 # Process the batch using nvmath stateful API
 filtered_images_nvmath = process_batch_nvmath(images_gpu, sigma_value)
-print("*** NVMATH BATCHED ***")
-print(f"Checksum={filtered_images_nvmath[0].sum():.1f}")
-print(benchmark(lambda: process_batch_nvmath(images_gpu, sigma_value), n_repeat=5, n_warmup=1))
+benchmark_result = benchmark(lambda: process_batch_nvmath(images_gpu, sigma_value), n_repeat=5, n_warmup=1).gpu_times.min()
+print(f"Process batch nvmath-python cost = {benchmark_result:0.4f} sec")
 
 
 def process_cupy_first_call(image_gpu, sigma_value):
@@ -173,12 +170,10 @@ def process_cupy_subsequent_call(image_gpu, sigma_value):
     gaussian_filter_cupy(image_gpu, sigma_value, clear_cache=False)
 
 
-print("*** CUPY BREAKDOWN ***")
 perf_first_call = benchmark(lambda: process_cupy_first_call(image_gpu, sigma_value), n_repeat=5, n_warmup=1).gpu_times.min()
 perf_subsequent_call = benchmark(lambda: process_cupy_subsequent_call(image_gpu, sigma_value), n_repeat=5, n_warmup=1).gpu_times.min()
-
-print(f"First call cost = {perf_first_call:0.4f} sec")
-print(f"Subsequent call cost = {perf_subsequent_call:0.4f} sec")
+print(f"CuPy first call cost = {perf_first_call:0.4f} sec")
+print(f"CuPy subsequent call cost = {perf_subsequent_call:0.4f} sec")
 
 # Create the gaussian kernel once for the batch (R2C format)
 filter = create_gaussian_filter(image_gpu.shape, sigma_value).astype(cp.complex64)
@@ -218,18 +213,20 @@ ifft = inverse_fft_plan(c2r_output)
 fft_image = forward_fft_execute(fft, image_gpu)
 filtered_image = inverse_fft_execute(ifft, fft_image)
 
-print("*** NVMATH BREAKDOWN ***")
-print(image_gpu.sum())
-print(filtered_image.sum())
+print("*** nvmath-python BREAKDOWN ***")
 
 perf_compile_epilog = benchmark(lambda: compile_epilog(), n_repeat=5, n_warmup=1).gpu_times.min()
 perf_forward_fft_plan = benchmark(lambda: forward_fft_plan(image_gpu, epilog), n_repeat=5, n_warmup=1).gpu_times.min()
 perf_inverse_fft_plan = benchmark(lambda: inverse_fft_plan(c2r_output), n_repeat=5, n_warmup=1).gpu_times.min()
 perf_forward_fft_execute = benchmark(lambda: forward_fft_execute(fft, image_gpu), n_repeat=5, n_warmup=1).gpu_times.min()
 perf_inverse_fft_execute = benchmark(lambda: inverse_fft_execute(ifft, fft_image), n_repeat=5, n_warmup=1).gpu_times.min()
+im = inverse_fft_execute(ifft, fft_image)
 
-print(f"Compilation cost = {perf_compile_epilog:0.4f} sec")
-print(f"Forward FFT plan cost = {perf_forward_fft_plan:0.4f} sec")
-print(f"Inverse FFT plan cost = {perf_inverse_fft_plan:0.4f} sec")
-print(f"Forward FFT execute cost = {perf_forward_fft_execute:0.4f} sec")
-print(f"Inverse FFT execute cost = {perf_inverse_fft_execute:0.4f} sec")
+print(f"nvmath-python compilation cost = {perf_compile_epilog:0.4f} sec")
+print(f"nvmath-python forward FFT plan cost = {perf_forward_fft_plan:0.4f} sec")
+print(f"nvmath-python inverse FFT plan cost = {perf_inverse_fft_plan:0.4f} sec")
+print(f"nvmath-python forward FFT execute cost = {perf_forward_fft_execute:0.4f} sec")
+print(f"nvmath-python inverse FFT execute cost = {perf_inverse_fft_execute:0.4f} sec")
+
+fft.free()
+ifft.free()
