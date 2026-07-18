@@ -1,0 +1,3 @@
+cupy a@b <lambda>            :    CPU:    79.000 us   +/- 20.664 (min:    65.130 / max:   120.030) us     GPU-0: 13129.101 us   +/-  9.116 (min: 13111.968 / max: 13139.072) us
+cupy matmul <lambda>            :    CPU:    71.456 us   +/-  2.302 (min:    68.740 / max:    75.110) us     GPU-0: 16037.510 us   +/-  3.807 (min: 16032.896 / max: 16044.256) us
+nvmath matmul <lambda>            :    CPU:   284.565 us   +/- 25.442 (min:   258.769 / max:   330.409) us     GPU-0:  4681.818 us   +/- 22.373 (min:  4657.440 / max:  4721.696) us
